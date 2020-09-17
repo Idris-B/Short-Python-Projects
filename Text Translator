@@ -1,0 +1,26 @@
+from googletrans import Translator
+from pathlib import PureWindowsPath
+import sys
+
+translator = Translator()
+
+print("The file MUST be a .txt file")
+
+fpath = input("Paste the file path here: ")
+
+srclang = input("What language is the file in?: ")
+destlang = input("What language do you want to translate it to?: ")
+
+try:
+    with open(PureWindowsPath(fpath), mode='r') as my_file:
+        translated = translator.translate(my_file.readlines(), dest = destlang, src='auto')
+except FileNotFoundError as err:
+    print("Check your file path. Whatever you said was there, isn't there")
+   # sys.exit(1)
+    
+print(type(translated))
+print("**********************")
+print(translated)
+print("**********************")
+for s in translated:
+    print(s.text)
