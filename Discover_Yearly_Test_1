@@ -1,0 +1,145 @@
+# Saves your Spotify Discover Weekly playlist to Discover Yearly Test 1
+# Commands to run the project in terminal: python Discover_Yearly_Test_1 <username>
+# It will send you to an authentication page where you will be required to sign in with the username you provided
+#
+#
+# Python Library spotipy created by   - https://github.com/plamere/
+#                       direct link   - https://github.com/plamere/spotipy
+#                       Documentation - https://spotipy.readthedocs.io/en/2.16.0/
+
+import spotipy
+import sys
+import spotipy.util as util
+from spotipy.oauth2 import SpotifyClientCredentials
+
+scope = "playlist-modify-private user-library-modify playlist-modify-public playlist-read-private"
+
+client_id = 'SPOTIFY_CLIENT_ID'
+client_secret = 'SPOTIFY_CLIENT_SECRET'
+redirect_uri = 'http://localhost:8888/callback' #This is intended to run on the user's terminal for now.
+
+
+def show_tracks(tracks):
+    for i, item in enumerate(tracks['items']):
+        track = item['track']
+        print("   %d %32.32s %s" % (i, track['artists'][0]['name'],
+            track['name']))
+   
+       
+#This is going to tell you how many playlists a user actually has (because the limit of playlists you can iterate through at one time is 50)
+#It will also let you know whether or not the discover yearly playlist already exists
+def get_num_playlists(token):
+    ### Update this once you know a little bit better about the methods in the library ####
+    print("in get num playlists")
+    testnumplaylists = 0
+    newplayliststhisiteration = 0
+    discoverweekly_exists = False
+        
+    discoveryearly_exists = False
+    print("discoveryearly set to false")
+    while ((newplayliststhisiteration % 50) == 0 & discoveryearly_exists == False):
+        newplayliststhisiteration = 0
+        playlists = sp.user_playlists(username, limit = 50, offset = testnumplaylists)
+        for playlist in playlists['items']:
+            print(playlist['name'])
+            #check if Discover Yearly Test 1 playlist exists, and get its ID
+            if (playlist['name'] == 'Discover Yearly Test 1'):
+                discoveryearly_id = playlist['id']
+                print('*****************************************************************************')
+                print('Discover Yearly Test 1 playlist already exists')
+                discoveryearly_exists = True
+            #Get Discover Weekly ID
+            if(playlist['name'] == 'Discover Weekly'):
+                discoverweekly_id = playlist['id']
+                print("*************************************************************")
+                print("DISCOVER WEEKLY EXISTS")
+                discoverweekly_exists = True
+            testnumplaylists += 1
+            newplayliststhisiteration += 1
+        
+    print(username + " has " + str(testnumplaylists) + " playlists")
+    if (discoveryearly_exists == False):
+        newplaylist = sp.user_playlist_create(username, "Discover Yearly Test 1", public = True, description="This is just a test to see if I'm getting this API to work correctly")
+        discoveryearly_id = newplaylist['id']
+    #THE ID WILL BE USED TO ADD TRACKS TO THE PLAYLIST LATER
+    if discoverweekly_exists == False:
+        print("For some reason, your discover weekly playlist is not showing up")
+        discoverweekly_id = None
+
+    return discoveryearly_exists, discoveryearly_id, discoverweekly_id
+
+def show_tracks(playlist):
+    tracks = playlist['tracks']
+    for i, item in enumerate(tracks['items']):
+            track = item['track']
+            print("   %d %32.32s %s" % (i+1, track['name'], "  -" +  track['artists'][0]['name']))
+
+#Adds the tracks into the discover yearly playlist
+def add_tracks(DW_id, DY_id):
+    
+    
+    result = sp.playlist_tracks(discoverweekly_id)
+    tracklist = result['items']
+    DW_track_id_list = []
+    for song in tracklist:
+        DW_track_id_list.append(song['track']['id'])
+        #print(song['track']['id']) #The following will print out the tracklist   
+
+    sp.user_playlist_add_tracks(username,DY_id, DW_track_id_list)
+       
+
+#Discover Weekly is by default a private playlist. 
+def add_discoverweekly(token, DW_id):
+    if (DW_id != None):
+        #First step is to iterate through the Discover Weekly Playlist
+        discoverweekly_playlist = sp.user_playlist(username, playlist_id=DW_id, fields="tracks, next")
+
+        print("You are about to add the following tracks:")
+        show_tracks(discoverweekly_playlist)
+
+        discoverweekly_playlist = sp.user_playlist(username, playlist_id=DW_id)
+
+
+        #Eventually add input for 'yes/no', but let's get a working build first
+        #ADDS THE ACTUAL TRACKS IN
+        add_tracks(DW_id, discoveryearly_id)
+    
+       
+  
+            
+
+        print("Your Discover Weekly Playlist for this week was successfully added to Discover Yearly Test 1")
+    else:
+        print("oooof, sorry bud, but we couldn't get your Discover Weekly ID. This might be because you aren't following your own Discover Weekly. Just hit follow on it, and you should be good")
+
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        username = sys.argv[1]
+        print("Your username is: " + username)
+    else:
+        print("Whoops, need your username!")
+        print("usage: python user_playlists.py [username]")
+        sys.exit()
+
+    token = util.prompt_for_user_token(username, scope, client_id, client_secret, redirect_uri)
+    print("you got the token")
+
+    if token:
+        sp = spotipy.Spotify(auth=token)
+        print("created sp object")
+        print(token)
+        #Check to see if 'Discover Yearly Test 1' playlist already exists
+        discoveryearly_exists, discoveryearly_id, discoverweekly_id = get_num_playlists(token)
+
+        
+        #If it doesn't already exist, create it
+        if (discoveryearly_exists == False):
+            newplaylist = sp.user_playlist_create(username, "Discover Yearly Test 1", public = True, description="This is just a test to see if I'm getting this API to work correctly")
+        
+        #Check to see if Discover Weekly is in private
+        #if it's in private run add_discoverweekly
+        add_discoverweekly(token, discoverweekly_id)
+               
+    else:
+        print("This really didn't work")
